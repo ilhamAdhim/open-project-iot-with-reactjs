@@ -6,8 +6,11 @@ import TableMenu from './Table'
 function App() {
   return (
     <div className="App" style={{ marginTop: "80px" }}>
-      <TableMenu timer1={5} timer2={6} timer3={7}></TableMenu>
-
+      <h2 style = {{color:"white"}}>
+      Lamps Management System
+        
+      </h2>
+      <TableMenu />
     </div>
   );
 }

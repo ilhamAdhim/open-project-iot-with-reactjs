@@ -3,45 +3,53 @@ import { Table, Button, Col, Container, Row } from 'react-bootstrap'
 
 export default function Section(props) {
     // props.lampsCollection.timer++
-    let hour = Math.floor(props.timer / 3600)
-    let minute = Math.floor((props.timer - hour * 3600) / 60)
-    let seconds = props.timer - (hour * 3600 + minute * 60)
-
     const turnedOff = <td style={{ backgroundColor: '' }}> Off </td>
     const turnedOn = <td style={{ backgroundColor: 'rgb(236, 193, 1)', color: 'black' }}> On</td>
 
-    const changeStatus = () => {
-        props.switch(props.lamp, {
-            isTurnOn: !props.isTurnOn,
-            led: props.lamp,
-            totalSec: props.timer
-        })
-
-        // {
-        //     led: props.lamp,
-        //     totalSec: 400,
-        //     timer: 4,
-        //     watt: 10,
-        //     isTurnOn: props.isTurnOn ? false : true}
-
+    const updateFirebase = () => {
+        props.switch(props.lampObject.led)
     }
 
-    const buttonOn = <Button onClick={() => {
-        changeStatus()
-    }}> Turn Off</Button>
-    const buttonOff = <Button onClick={() => {
-        changeStatus()
-    }}> Turn On</Button>
+    function timerLamp(lampObject) {
+
+        function start() {
+            lampObject.totalSec++
+            let hour = Math.floor(lampObject.totalSec / 3600)
+            let minute = Math.floor((lampObject.totalSec - hour * 3600) / 60)
+            let seconds = lampObject.totalSec - (hour * 3600 + minute * 60)
+        }
+
+        function stopTimer() {
+            let timer = lampObject.timer
+            clearInterval(timer)
+        }
+
+        function resumeTimer() {
+            //Hold current value of totalSec to tmpSecond
+            let tmpSecond = lampObject.totalSec
+            //create new object that totalSec parameter is the valu tmpSecond
+            props.switch(props.lampObject.led, {
+                isTurnOn: props.lampObject.isTurnOn,
+                led: props.lampObject.led,
+                totalSec: tmpSecond,
+                timer: setInterval(start, 1000),
+                watt: 10
+            })
+        }
+    }
+
+    const buttonOn = <Button onClick={updateFirebase}> Turn Off</Button>
+    const buttonOff = <Button onClick={updateFirebase}> Turn On</Button>
 
     return (
         <div>
             <Container>
                 <Row>
                     <Col>
-                        Lamp {props.lamp}
+                        Lamp {props.lampObject.led}
                     </Col>
                     <Col style={{ padding: '0px' }}>
-                        {props.isTurnOn ? buttonOn : buttonOff}
+                        {props.lampObject.isTurnOn ? buttonOn : buttonOff}
                     </Col>
                 </Row>
             </Container>
@@ -49,12 +57,13 @@ export default function Section(props) {
             <Table variant="dark" responsive>
                 <tbody >
                     <tr style={{ height: '45vh' }}>
-                        {props.isTurnOn ? turnedOn : turnedOff}
+                        {props.lampObject.isTurnOn ? turnedOn : turnedOff}
                     </tr>
 
                     <tr>
                         <td>
-                            {hour} : {minute} : {seconds}
+                            {/* {hour} : {minute} : {seconds} */}
+                            {2}
                         </td>
                     </tr>
                 </tbody>
