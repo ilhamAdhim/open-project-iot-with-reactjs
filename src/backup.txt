@@ -1,0 +1,21 @@
+
+//To update the lamp without refreshing (uncompleted)
+in changeLampStatus(index)
+item = {
+            led: index === 1 ? 1 : index === 2 ? 2 : 3,
+            totalSec: 200,
+            timer: 2,
+            watt: 10,
+            isTurnOn: lampsCollection[index - 1].isTurnOn ? false : true
+        }
+setLampsCollection(() => {
+    lampsCollection[index - 1] = item
+})
+
+
+//lamp1,lamp2,lamp3 is declared, it will be used on onClick event on Section.js
+    // const [lamp1, setLamp1] = React.useState({})
+
+    // const [lamp2, setLamp2] = React.useState({})
+
+    // const [lamp3, setLamp3] = React.useState({})

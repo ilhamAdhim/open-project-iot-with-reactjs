@@ -2,58 +2,52 @@ import React from 'react'
 import { Table } from 'react-bootstrap'
 import firebase from './firebase'
 import Section from './Section'
+import Timer from './Timer'
 
 //How my program works to read data from firebase : 
 //  declare status state for each lamp's initial value in client, will be updated when client connected to firebase
 // (connectedToFirebase state comes in handy)
 
 export default function TableMenu() {
+
     const syncLamp = 3
 
     const [connectedToFirebase] = React.useState()
-    //lamp1,lamp2,lamp3 is declared, it will be used on onClick event on Section.js
-    // const [lamp1, setLamp1] = React.useState({})
-
-    // const [lamp2, setLamp2] = React.useState({})
-
-    // const [lamp3, setLamp3] = React.useState({})
 
     //Initial state of lampsCollection is empty array with 3 elements
     //eslint-disable-next-line
-    const [lampsCollection, setLampsCollection] = React.useState([, ,])
+    const [lampsCollection, setLampsCollection] = React.useState([{}, {}, {}])
+    const [timeCollection, setTimeCollection] = React.useState([{}, {}, {}])
+
     let condition = [{}, {}, {}]
-    let item
-    let count = 0
-    const [status, setStatus] = React.useState([0, 0, 0])
+    let timeInfo = [{}, {}, {}]
+    let item, timeEachLamp
+    const [status, setStatus] = React.useState([])
 
-    changeLampStatus.bind()
-
+    // changeLampStatus.bind()
     function changeLampStatus(index) {
-        item = {
-            led: index === 1 ? 1 : index === 2 ? 2 : 3,
-            totalSec: 200,
-            timer: 2,
-            watt: 10,
-            isTurnOn: lampsCollection[index - 1].isTurnOn ? false : true
-        }
-        setLampsCollection(() => {
-            lampsCollection[index - 1] = item
-        })
-
-        console.log(lampsCollection)
-
-        writeStatusToFirebase(index - 1)
+        writeStatusToFirebase(index - 1, false)
         window.location.reload(false)
+        // writeStatusToFirebase(index - 1, true)
     }
 
-    function updateCollection(data) {
-        //Jika ada perubahan di firebase database maka update lampsCollection
-        setLampsCollection([data[0], data[1], data[2]])
+    function updateCollection(data, updateTime) {
+        if (updateTime) {
+            setTimeCollection([data[0], data[1], data[2]])
+        } else {
+            //Jika ada perubahan di firebase database maka update lampsCollection
+            setLampsCollection([data[0], data[1], data[2]])
+        }
     }
 
-    const checkLampStatus = () => { for (let index = 1; index <= syncLamp; index++) readLampStatus(index) }
+    const checkLampStatus = () => {
+        for (let index = 1; index <= syncLamp; index++) {
+            readLampStatus(index)
+            timerLamp(index)
+        }
+    }
 
-    React.useEffect(checkLampStatus, [connectedToFirebase])
+    React.useEffect(checkLampStatus, [])
 
     function readLampStatus(led) {
         firebase.database().ref(`/leds/` + led + `/status`).on('value', function (snapshot) {
@@ -61,28 +55,56 @@ export default function TableMenu() {
                 status[led - 1] = parseInt(snapshot.val())
             })
             item = {
-                led: led === 1 ? 1 : led === 2 ? 2 : 3,
-                totalSec: 200,
-                timer: 2,
+                led: led,
                 watt: 10,
-                isTurnOn: !!(status[led - 1])
+                isTurnOn: !!(status[led - 1]),
             }
             console.log("Reading firebase ... Detected changes on lamp " + led)
             console.log("Lamp " + led + " is " + (item.isTurnOn ? 'On' : 'Off'))
+
             condition[led - 1] = item
-            updateCollection(condition);
-
-
-            // timerLamp(led, isTurnOn)
+            updateCollection(condition, false);
             // setTimeout(recordTimeToFirebase(led), 1000)
         })
-
     }
-    function writeStatusToFirebase(led) {
-        let updates = {}
-        updates[`leds/` + (led + 1) + `/status`] = (lampsCollection[led].isTurnOn) ? 0 : 1
-        firebase.database().ref().update(updates)
 
+    function timerLamp(led) {
+        firebase.database().ref(`/leds/` + led + `/seconds`).on('value', function (snapshot) {
+            let secondsFirebase = parseInt(snapshot.val())
+
+            if (status[led] !== 0) {
+                console.log("start timer")
+                // resumeTimer(true, secondsFirebase)
+                // console.log("lamp " + led + " seconds : " + lampObject.totalSec)
+            } else
+                console.log("stop timer")
+
+            const hour = Math.floor(secondsFirebase / 3600)
+            const minute = Math.floor((secondsFirebase - hour * 3600) / 60)
+            const seconds = secondsFirebase - (hour * 3600 + minute * 60)
+
+            console.log("lamp " + led + " is : " + hour + " : " + minute + " : " + seconds)
+            timeEachLamp = {
+                led: led,
+                totalSec: secondsFirebase,
+                hour: hour,
+                minute: minute,
+                seconds: seconds
+            }
+            // timer: lampObject.isTurnOn ? setInterval(start, 1000) : stopTimer()
+
+            timeInfo[led - 1] = timeEachLamp
+            updateCollection(timeInfo, true);
+        })
+    }
+
+
+    function writeStatusToFirebase(led, isTimer) {
+        let updates = {}
+        const addPath = isTimer ? '/seconds' : '/status'
+        const values = isTimer ? lampsCollection[led].totalSec : (lampsCollection[led].isTurnOn) ? 0 : 1
+        updates['leds/' + (led + 1) + addPath] = values
+        firebase.database().ref().update(updates)
         // setTimeout(recordTimeToFirebase(led), 1000)
     }
 
@@ -90,16 +112,21 @@ export default function TableMenu() {
         <Table striped hover responsive variant={'dark'}>
             <tbody>
                 <tr>
-                    {/* //Coba pass datanya ga usah di map  */}
                     {lampsCollection.map(eachLamp =>
+                        <td key={eachLamp.led}>
+                            <Section
+                                lampObject={eachLamp}
+                                writeFirebase={changeLampStatus}
+                            />
+                        </td>
+                    )}
+                </tr>
 
-                        eachLamp !== undefined ?
-                            <td key={eachLamp.led}>
-                                <Section
-                                    lampObject={eachLamp}
-                                    switch={changeLampStatus}
-                                />
-                            </td> : <td> LOADING </td>
+                <tr>
+                    {timeCollection.map(eachTimeIndicator =>
+                        <td key={eachTimeIndicator.led}>
+                            <Timer timeObject={eachTimeIndicator} />
+                        </td>
                     )}
                 </tr>
 
