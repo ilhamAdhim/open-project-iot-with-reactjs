@@ -6,29 +6,39 @@ import Timer from './Timer'
 
 //How my program works to read data from firebase : 
 //  declare status state for each lamp's initial value in client, will be updated when client connected to firebase
-// (connectedToFirebase state comes in handy)
 
 export default function TableMenu() {
 
     const syncLamp = 3
 
-    const [connectedToFirebase] = React.useState()
-
     //Initial state of lampsCollection is empty array with 3 elements
     //eslint-disable-next-line
     const [lampsCollection, setLampsCollection] = React.useState([{}, {}, {}])
     const [timeCollection, setTimeCollection] = React.useState([{}, {}, {}])
+    const [status, setStatus] = React.useState([, ,])
+
 
     let condition = [{}, {}, {}]
     let timeInfo = [{}, {}, {}]
     let item, timeEachLamp
-    const [status, setStatus] = React.useState([])
 
     // changeLampStatus.bind()
-    function changeLampStatus(index) {
+    function changeLampStatus(index, status) {
+        let updateLamp = lampsCollection
+        updateLamp[index - 1].isTurnOn = status
+        setLampsCollection(updateLamp)
         writeStatusToFirebase(index - 1, false)
         window.location.reload(false)
+
         // writeStatusToFirebase(index - 1, true)
+    }
+
+
+    function changeLampTimer(index, currTimer) {
+        let updateTime = timeCollection
+        updateTime[index - 1] = currTimer
+        setTimeCollection(updateTime)
+        writeStatusToFirebase(index - 1, true)
     }
 
     function updateCollection(data, updateTime) {
@@ -68,14 +78,13 @@ export default function TableMenu() {
         })
     }
 
+
     function timerLamp(led) {
         firebase.database().ref(`/leds/` + led + `/seconds`).on('value', function (snapshot) {
             let secondsFirebase = parseInt(snapshot.val())
-
             if (status[led] !== 0) {
                 console.log("start timer")
-                // resumeTimer(true, secondsFirebase)
-                // console.log("lamp " + led + " seconds : " + lampObject.totalSec)
+
             } else
                 console.log("stop timer")
 
@@ -89,7 +98,8 @@ export default function TableMenu() {
                 totalSec: secondsFirebase,
                 hour: hour,
                 minute: minute,
-                seconds: seconds
+                seconds: seconds,
+                isTurnOn: !!(status[led - 1]),
             }
             // timer: lampObject.isTurnOn ? setInterval(start, 1000) : stopTimer()
 
@@ -97,12 +107,10 @@ export default function TableMenu() {
             updateCollection(timeInfo, true);
         })
     }
-
-
     function writeStatusToFirebase(led, isTimer) {
         let updates = {}
         const addPath = isTimer ? '/seconds' : '/status'
-        const values = isTimer ? lampsCollection[led].totalSec : (lampsCollection[led].isTurnOn) ? 0 : 1
+        const values = isTimer ? timeCollection[led].totalSec : (lampsCollection[led].isTurnOn) ? 0 : 1
         updates['leds/' + (led + 1) + addPath] = values
         firebase.database().ref().update(updates)
         // setTimeout(recordTimeToFirebase(led), 1000)
@@ -125,7 +133,9 @@ export default function TableMenu() {
                 <tr>
                     {timeCollection.map(eachTimeIndicator =>
                         <td key={eachTimeIndicator.led}>
-                            <Timer timeObject={eachTimeIndicator} />
+                            <Timer timeObject={eachTimeIndicator}
+                                writeTimeFirebase={changeLampTimer}
+                            />
                         </td>
                     )}
                 </tr>
